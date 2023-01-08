@@ -1,11 +1,12 @@
 package br.com.gusta.bank.integrationtests.controller;
 
-
 import br.com.gusta.bank.configs.*;
 import br.com.gusta.bank.data.vo.v1.security.*;
 import br.com.gusta.bank.integrationtests.data.operations.v1.*;
 import br.com.gusta.bank.integrationtests.data.vo.v1.*;
 import br.com.gusta.bank.integrationtests.testcontainers.*;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.*;
 import io.restassured.builder.*;
 import io.restassured.filter.log.*;
 import io.restassured.specification.*;
@@ -13,12 +14,14 @@ import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.*;
 
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AccountControllerJsonTests extends AbstractIntegrationTest {
 
     private static RequestSpecification specification;
+    private static ObjectMapper objectMapper;
 
     private static AccountVO vo;
     private static Deposit deposit;
@@ -29,6 +32,8 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         vo = new AccountVO();
         deposit = new Deposit();
         transfer = new Transfer();
+        objectMapper = new ObjectMapper();
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     }
 
     @AfterAll
@@ -40,7 +45,7 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
 
     @Test
     @Order(1)
-    public void testCreateAccount_Success() {
+    public void testCreateAccount_Success() throws JsonProcessingException {
 
         mockVO();
 
@@ -52,13 +57,25 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
                     .addFilter(new ResponseLoggingFilter(LogDetail.ALL))
                 .build();
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(vo)
                     .when()
                     .post()
                 .then()
-                    .statusCode(201);
+                    .statusCode(201)
+                        .extract()
+                            .body()
+                                .asString();
+
+        //Account info
+        assertTrue(content.contains(vo.getAccountName()));
+        assertTrue(content.contains(vo.getAccountBalance().toString()));
+        assertFalse(content.contains(vo.getAccountPassword()));
+
+        //Links
+        assertTrue(content.contains("http://localhost:8888/api/bank/v1/login"));
+        assertTrue(content.contains("http://localhost:8888/api/bank/v1/deposit"));
     }
 
     @Test
@@ -69,13 +86,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         vo.setAccountName(null);
         vo.setAccountName(null);
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(vo)
                     .when()
                     .post()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Not possible create a account with null fields"));
     }
 
     @Test
@@ -86,13 +108,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         vo.setAccountName("");
         vo.setAccountName("");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(vo)
                     .when()
                     .post()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Not possible create a account with empty fields"));
     }
 
     @Test
@@ -101,13 +128,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
 
         mockVO();
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(vo)
                     .when()
                     .post()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("This name is already being used, please try other name"));
     }
 
     @Test
@@ -125,13 +157,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
                 .addFilter(new ResponseLoggingFilter(LogDetail.ALL))
                 .build();
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(deposit)
-                .when()
-                .put()
+                    .body(deposit)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Enter a value in the parameters"));
     }
 
     @Test
@@ -141,13 +178,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockDeposit();
         deposit.setAccountName("");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(deposit)
                     .when()
                     .put()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Enter a valid value in the parameters"));
     }
 
     @Test
@@ -159,13 +201,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockDeposit();
         deposit.setAccountName(vo.getAccountName());
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(deposit)
                     .when()
                     .put()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("This account does not exists, please register in /api/bank/v1/create"));
     }
 
     @Test
@@ -175,14 +222,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockDeposit();
         deposit.setDepositValue(0D);
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(deposit)
-                .when()
-                .put()
+                    .body(deposit)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
 
+        assertTrue(content.contains("Put a valid value!"));
     }
 
     @Test
@@ -191,14 +242,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
 
         mockDeposit();
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(deposit)
-                .when()
-                .put()
+                    .body(deposit)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(200);
+                    .statusCode(200)
+                        .extract()
+                            .body()
+                                .asString();
 
+        assertTrue(content.contains("the deposit is completed"));
     }
 
     @Test
@@ -228,7 +283,7 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
     @Order(10)
     public void authorization() {
 
-        AccountVO user = new AccountVO("gusta", "pass");
+        AccountVO user = new AccountVO("Janel", "pass");
 
         var accessToken = given()
                 .basePath("/api/bank/v1/login")
@@ -261,13 +316,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockTransfer();
         transfer.setValueTransfer(0D);
 
-        given().spec(specification)
-            .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(transfer)
-                .when()
-                .put()
-            .then()
-                .statusCode(400);
+        var content = given().spec(specification)
+                .contentType(TestConfigs.CONTENT_TYPE_JSON)
+                    .body(transfer)
+                    .when()
+                    .put()
+                .then()
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Put a valid value!"));
     }
 
     @Test
@@ -277,13 +337,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockTransfer();
         transfer.setDestinyAccountName(null);
 
-        given().spec(specification)
-                .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                    .body(transfer)
-                    .when()
-                    .put()
-                .then()
-                    .statusCode(400);
+        var content = given().spec(specification)
+                    .contentType(TestConfigs.CONTENT_TYPE_JSON)
+                        .body(transfer)
+                        .when()
+                        .put()
+                    .then()
+                        .statusCode(400)
+                                .extract()
+                                        .body()
+                                                .asString();
+
+        assertTrue(content.contains("Enter a value in the parameters"));
     }
 
     @Test
@@ -293,13 +358,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockTransfer();
         transfer.setDestinyAccountName("");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
                     .body(transfer)
                     .when()
                     .put()
                 .then()
-                    .statusCode(400);
+                    .statusCode(400)
+                            .extract()
+                                    .body()
+                                            .asString();
+
+        assertTrue(content.contains("Enter a valid value in the parameters"));
     }
 
     @Test
@@ -309,13 +379,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockTransfer();
         transfer.setDestinyAccountName("NonExistent");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(transfer)
-                .when()
-                .put()
+                    .body(transfer)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(400);
+                    .statusCode(400)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("This account does not exists, please register in /api/bank/v1/create"));
     }
 
     @Test
@@ -323,15 +398,20 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
     public void testTransfer_DestinyAccountEqualsLoggedAccount() {
 
         mockTransfer();
-        transfer.setDestinyAccountName("");
+        transfer.setDestinyAccountName("Janel");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(transfer)
-                .when()
-                .put()
+                    .body(transfer)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(400);
+                    .statusCode(400)
+                            .extract()
+                                    .body()
+                                            .asString();
+
+        assertTrue(content.contains("Not possible transfer money to yourself"));
     }
 
     @Test
@@ -341,13 +421,18 @@ public class AccountControllerJsonTests extends AbstractIntegrationTest {
         mockTransfer();
         transfer.setDestinyAccountName("tests");
 
-        given().spec(specification)
+        var content = given().spec(specification)
                 .contentType(TestConfigs.CONTENT_TYPE_JSON)
-                .body(transfer)
-                .when()
-                .put()
+                    .body(transfer)
+                    .when()
+                    .put()
                 .then()
-                .statusCode(200);
+                    .statusCode(200)
+                        .extract()
+                            .body()
+                                .asString();
+
+        assertTrue(content.contains("Transfer successful"));
     }
 
     private void mockVO() {

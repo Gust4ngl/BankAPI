@@ -1,7 +1,5 @@
 package br.com.gusta.bank.unittests.services;
 
-
-
 import br.com.gusta.bank.exceptions.*;
 import br.com.gusta.bank.data.vo.v1.*;
 import br.com.gusta.bank.model.*;
@@ -53,11 +51,12 @@ public class AccountServicesTest {
     }
     @Test
     void testCreateAccount_AccountExistent() {
+        when(repository.checkIfExists(vo.getAccountName())).thenReturn(entity.getAccountName());
+
         assertNotNull(vo.getAccountName());
         assertNotNull(vo.getAccountPassword());
         assertNotEquals("", vo.getAccountName());
         assertNotEquals("", vo.getAccountPassword());
-        when(repository.findByUsername(vo.getAccountName())).thenReturn(entity);
 
         assertThrows(RepeatedAccountException.class, () -> service.createAccount(vo));
     }
@@ -104,7 +103,7 @@ public class AccountServicesTest {
     }
     @Test
     void testReceive_NonExistentAccount() {
-        when(repository.findByUsername(deposit.getAccountName())).thenReturn(null);
+        when(repository.checkIfExists(deposit.getAccountName())).thenReturn(null);
 
         assertThrows(RequiredObjectIsNullException.class, () -> service.deposit(deposit));
 
@@ -121,17 +120,18 @@ public class AccountServicesTest {
     }
     @Test
     void testReceive_DepositSuccessfully() {
-        when(repository.findByUsername(vo.getAccountName())).thenReturn(entity);
-        when(repository.save(entity)).thenReturn(persisted);
+        when(repository.checkIfExists(deposit.getAccountName())).thenReturn(entity.getAccountName());
+        when(repository.getAccountBalanceByUsername(entity.getAccountName())).thenReturn(entity.getAccountBalance());
 
         service.deposit(deposit);
 
+        System.out.println(entity.getAccountBalance());
         assertNotNull(deposit.getAccountName());
         assertNotNull(deposit.getDepositValue());
         assertNotEquals("", deposit.getAccountName());
         assertNotEquals("", deposit.getDepositValue().toString());
         assertTrue(deposit.getDepositValue() > 0);
-        assertEquals(120D, deposit.getDepositValue() + entity.getAccountBalance());
+        assertEquals(110D, deposit.getDepositValue() + entity.getAccountBalance());
     }
     //end of tests (Deposit method)
 
@@ -180,8 +180,9 @@ public class AccountServicesTest {
     }
     @Test
     void testTransfer_TransferSuccessful () {
-        when(repository.findByUsername(entity.getAccountName())).thenReturn(new MockAccount().mockEntity());
-        when(repository.findByUsername(transfer.getDestinyAccountName())).thenReturn(persisted);
+        when(repository.findByUsername(entity.getAccountName())).thenReturn(persisted);
+        when(repository.checkIfExists(transfer.getDestinyAccountName())).thenReturn(entity.getAccountName());
+        when(repository.getAccountBalanceByUsername(entity.getAccountName())).thenReturn(entity.getAccountBalance());
 
         service.loadUserByUsername(entity.getAccountName());
         service.transfer(transfer);

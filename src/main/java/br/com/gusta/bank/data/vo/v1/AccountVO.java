@@ -14,6 +14,20 @@ public class AccountVO extends RepresentationModel<AccountVO> {
 	private String accountPassword;
 	private Double accountBalance;
 
+	public AccountVO() {
+	}
+
+	public AccountVO(String accountName, Double accountBalance) {
+		this.accountName = accountName;
+		this.accountBalance = accountBalance;
+	}
+
+	public AccountVO(String accountName, String accountPassword, Double accountBalance) {
+		this.accountName = accountName;
+		this.accountPassword = accountPassword;
+		this.accountBalance = accountBalance;
+	}
+
 	public String getAccountName() {
 		return accountName;
 	}

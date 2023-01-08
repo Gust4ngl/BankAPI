@@ -21,13 +21,13 @@ public class AccountServices implements UserDetailsService {
 
 	@Autowired
 	AccountRepository repository;
-	String accountName;
+	AccountVO vo;
 
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		var account = repository.findByUsername(username);
 		if (account == null) throw new UsernameNotFoundException("User not found!");
-		accountName = account.getAccountName();
+		vo = new AccountVO(account.getAccountName(), account.getAccountBalance());
 		return new CustomUserDetails(account);
 	}
 
@@ -36,7 +36,7 @@ public class AccountServices implements UserDetailsService {
 		if (accountVO.getAccountName().isBlank() || accountVO.getAccountPassword().isBlank()) throw new IllegalArgumentException("Not possible create a account with empty fields");
 		if (accountVO.getAccountBalance() == null || accountVO.getAccountBalance().toString().isBlank()) accountVO.setAccountBalance(0D);
 
-		var verifyDoesNotExists = repository.findByUsername(accountVO.getAccountName());
+		var verifyDoesNotExists = repository.checkIfExists(accountVO.getAccountName());
 		if(verifyDoesNotExists != null) throw new RepeatedAccountException();
 
 		Account entity = DozerMapper.parseObject(accountVO, Account.class);
@@ -65,30 +65,32 @@ public class AccountServices implements UserDetailsService {
 		if (deposit.getAccountName().isBlank() || deposit.getDepositValue().toString().isBlank()) throw new IllegalArgumentException("Enter a valid value in the parameters");
 		if (deposit.getDepositValue() <= 0) throw new InvalidValueException();
 
-		Account entity = repository.findByUsername(deposit.getAccountName());
-		if (entity == null) throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
+		var accountName = repository.checkIfExists(deposit.getAccountName());
+		if (accountName == null) throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
+		Double accountBalance = repository.getAccountBalanceByUsername(accountName);
+		accountBalance += deposit.getDepositValue();
 
-		entity.setAccountBalance(entity.getAccountBalance() + deposit.getDepositValue());
-		repository.save(entity);
+		repository.updateBalanceByUsername(accountName, accountBalance);
 		return "the deposit is completed";
 	}// end of the deposit method
 
 	public String transfer(TransferVO transfer) {
 
-		Account originEntity = repository.findByUsername(accountName);
-		if (transfer.getDestinyAccountName().equalsIgnoreCase(originEntity.getAccountName())) throw new IllegalArgumentException("Not possible transfer money to yourself");
-		if (transfer.getValueTransfer() > originEntity.getAccountBalance() || transfer.getValueTransfer() <= 0) throw new InvalidValueException();
+		if (transfer.getValueTransfer() <= 0 || transfer.getValueTransfer() > vo.getAccountBalance()) throw new InvalidValueException();
 
 		if (transfer.getDestinyAccountName() == null || transfer.getValueTransfer() == null) throw new NullPointerException("Enter a value in the parameters");
 		if (transfer.getDestinyAccountName().isBlank() || transfer.getValueTransfer().toString().isBlank()) throw new IllegalArgumentException("Enter a valid value in the parameters");
+		if (transfer.getDestinyAccountName().equalsIgnoreCase(vo.getAccountName())) throw new IllegalArgumentException("Not possible transfer money to yourself");
 
-		Account destinyEntity = repository.findByUsername(transfer.getDestinyAccountName());
-		if (destinyEntity == null) throw new RequiredObjectIsNullException();
+		var name = repository.checkIfExists(transfer.getDestinyAccountName());
+		if (name == null) throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
+		Double accountBalance = repository.getAccountBalanceByUsername(name);
+		AccountVO destinyEntity = new AccountVO(name, accountBalance);
 
-		originEntity.setAccountBalance(originEntity.getAccountBalance() - transfer.getValueTransfer());
+		vo.setAccountBalance(vo.getAccountBalance() - transfer.getValueTransfer());
 		destinyEntity.setAccountBalance(destinyEntity.getAccountBalance() + transfer.getValueTransfer());
-		repository.save(originEntity);
-		repository.save(destinyEntity);
+		repository.updateBalanceByUsername(vo.getAccountName(), vo.getAccountBalance());
+		repository.updateBalanceByUsername(destinyEntity.getAccountName(), destinyEntity.getAccountBalance());
 		return "Transfer successful";
 	}// end of the transfer method
 

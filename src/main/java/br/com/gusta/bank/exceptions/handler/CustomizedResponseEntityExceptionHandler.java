@@ -3,6 +3,7 @@ package br.com.gusta.bank.exceptions.handler;
 import br.com.gusta.bank.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.*;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,7 +35,8 @@ public class CustomizedResponseEntityExceptionHandler extends ResponseEntityExce
 					RequiredObjectIsNullException.class,
 					WrongPasswordException.class,
 					RepeatedAccountException.class,
-					InvalidValueException.class
+					InvalidValueException.class,
+					BadCredentialsException.class
 			})
 	public final ResponseEntity<ExceptionResponse> handleBadRequestExceptions(Exception ex, WebRequest request) {
 		ExceptionResponse exResponse = new ExceptionResponse(new Date(), ex.getMessage(), request.getDescription(false));
