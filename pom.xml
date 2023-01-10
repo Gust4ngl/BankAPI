@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>br.com.gusta.bank</groupId>
-	<artifactId>bank_api</artifactId>
+	<artifactId>Bank_API</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>bank_api</name>
+	<name>Bank_API</name>
 	<description>none</description>
 	<properties>
 		<java.version>18</java.version>
@@ -66,7 +66,7 @@
 		</dependency>
 		<!-- -->
 
-		<!-- -->
+		<!-- Migrations -->
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-core</artifactId>
@@ -75,7 +75,7 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
-		<!-- -->
+		<!-- Migrations -->
 
 		<dependency>
 			<groupId>com.github.dozermapper</groupId>
@@ -96,7 +96,7 @@
 			<artifactId>mysql</artifactId>
 			<version>1.17.6</version>
 		</dependency>
-		<!-- -->
+		<!-- Integration Tests -->
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
