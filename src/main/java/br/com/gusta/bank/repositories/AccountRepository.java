@@ -1,12 +1,12 @@
 package br.com.gusta.bank.repositories;
 
+import br.com.gusta.bank.model.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.*;
 import org.springframework.stereotype.Repository;
 
-import br.com.gusta.bank.model.Account;
-
 import javax.transaction.*;
+import java.util.*;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long>{
@@ -19,6 +19,9 @@ public interface AccountRepository extends JpaRepository<Account, Long>{
 
 	@Query("SELECT a.accountBalance FROM Account a WHERE a.accountName =:accountName")
 	Double getAccountBalanceByUsername(@Param("accountName") String accountName);
+
+	@Query("SELECT a.permissions FROM Account a WHERE a.accountName =:accountName")
+	List<Permission> getPermissionsByUsername(@Param("accountName") String accountName);
 
 	@Transactional
 	@Modifying

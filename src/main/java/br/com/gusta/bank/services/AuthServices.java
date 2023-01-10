@@ -3,12 +3,15 @@ package br.com.gusta.bank.services;
 import br.com.gusta.bank.controllers.*;
 import br.com.gusta.bank.data.vo.v1.*;
 import br.com.gusta.bank.data.vo.v1.security.*;
+import br.com.gusta.bank.exceptions.*;
+import br.com.gusta.bank.model.*;
 import br.com.gusta.bank.repositories.*;
 import br.com.gusta.bank.security.jwt.*;
 import org.springframework.beans.factory.annotation.*;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.*;
+
+import java.util.*;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -27,20 +30,17 @@ public class AuthServices {
 
     public TokenVO login(AccountCredentialsVO data) {
         try {
-            var username = data.getAccountName();
-            var password = data.getAccountPassword();
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, password));
+            String username = data.getAccountName();
 
-            var user = repository.findByUsername(username);
-
-            var tokenResponse = new TokenVO();
-            if (user == null) {
-                throw new UsernameNotFoundException("Username " + username + " not found!");
-
+            if (repository.checkIfExists(username) == null) {
+                throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
             }
-            tokenResponse = tokenProvider.createAccessToken(username, user.getRoles());
-            tokenResponse
+
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(username, data.getAccountPassword()));
+
+            var tokenResponse = tokenProvider
+                    .createAccessToken(username, roles(repository.getPermissionsByUsername(username)))
                     .add(linkTo(methodOn(AccountController.class)
                             .transfer(new TransferVO()))
                             .withSelfRel());
@@ -50,4 +50,14 @@ public class AuthServices {
             throw new BadCredentialsException("Invalid username/password supplied!");
         }
     }
+
+    //Method created to get just the descriptions of roles/permissions.
+    private List<String> roles(List<Permission> permissionList) {
+        List<String> roles = new ArrayList<>();
+        for (Permission permission : permissionList) {
+            roles.add(permission.getDescription());
+        }
+        return roles;
+    }
+
 }

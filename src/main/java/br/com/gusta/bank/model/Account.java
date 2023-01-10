@@ -23,14 +23,6 @@ public class Account {
 			inverseJoinColumns = {@JoinColumn (name = "id_permission")}
 	)
 	private List<Permission> permissions;
-
-	public List<String> getRoles() {
-		List<String> roles = new ArrayList<>();
-		for (Permission permission : permissions) {
-			roles.add(permission.getDescription());
-		}
-		return roles;
-	}
 	
 	public Account() {}
 
@@ -75,13 +67,15 @@ public class Account {
 	}
 
 	@Override
-	public String toString() {
-		return "Account{" +
-				"id=" + id +
-				", accountName='" + accountName + '\'' +
-				", accountPassword='" + accountPassword + '\'' +
-				", accountBalance='" + accountBalance + '\'' +
-				", role='" + permissions + '\'' +
-				'}';
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Account account = (Account) o;
+		return Objects.equals(id, account.id) && Objects.equals(accountName, account.accountName) && Objects.equals(accountPassword, account.accountPassword) && Objects.equals(accountBalance, account.accountBalance) && Objects.equals(permissions, account.permissions);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(id, accountName, accountPassword, accountBalance, permissions);
 	}
 }

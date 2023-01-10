@@ -82,10 +82,9 @@ public class AccountServices implements UserDetailsService {
 		if (transfer.getDestinyAccountName().isBlank() || transfer.getValueTransfer().toString().isBlank()) throw new IllegalArgumentException("Enter a valid value in the parameters");
 		if (transfer.getDestinyAccountName().equalsIgnoreCase(vo.getAccountName())) throw new IllegalArgumentException("Not possible transfer money to yourself");
 
-		var name = repository.checkIfExists(transfer.getDestinyAccountName());
-		if (name == null) throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
-		Double accountBalance = repository.getAccountBalanceByUsername(name);
-		AccountVO destinyEntity = new AccountVO(name, accountBalance);
+		if (repository.checkIfExists(transfer.getDestinyAccountName()) == null) throw new RequiredObjectIsNullException("This account does not exists, please register in /api/bank/v1/create");
+		Double accountBalance = repository.getAccountBalanceByUsername(transfer.getDestinyAccountName());
+		AccountVO destinyEntity = new AccountVO(transfer.getDestinyAccountName(), accountBalance);
 
 		vo.setAccountBalance(vo.getAccountBalance() - transfer.getValueTransfer());
 		destinyEntity.setAccountBalance(destinyEntity.getAccountBalance() + transfer.getValueTransfer());
